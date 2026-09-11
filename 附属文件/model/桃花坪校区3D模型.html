@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>桃花坪校区 3D 建筑模型</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Microsoft YaHei', sans-serif; overflow: hidden; background: #e8e4dc; }
+#canvas-container { width: 100vw; height: 100vh; }
+#info { position: absolute; top: 20px; left: 20px; color: #4a4a4a; background: rgba(255,255,255,0.85); padding: 12px 18px; border-radius: 8px; pointer-events: none; box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
+#info h2 { margin: 0 0 4px; font-size: 18px; }
+#info p { margin: 0; font-size: 13px; opacity: 0.7; }
+#legend { position: absolute; bottom: 30px; left: 20px; color: #4a4a4a; background: rgba(255,255,255,0.85); padding: 12px 16px; border-radius: 8px; font-size: 13px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
+.legend-item { display: flex; align-items: center; margin: 4px 0; }
+.legend-color { width: 16px; height: 16px; border-radius: 3px; margin-right: 8px; border: 1px solid rgba(0,0,0,0.1); }
+#controls-hint { position: absolute; bottom: 30px; right: 20px; color: rgba(0,0,0,0.5); background: rgba(255,255,255,0.75); padding: 8px 14px; border-radius: 6px; font-size: 12px; }
+#tooltip { position: absolute; background: rgba(50,50,50,0.9); color: white; padding: 6px 10px; border-radius: 4px; font-size: 12px; pointer-events: none; display: none; z-index: 100; }
+#poi-tooltip { position:absolute; display:none; z-index:110; max-width:190px; padding:6px 10px; border-radius:12px; background:rgba(30,74,92,.94); color:#fff; font-size:11px; line-height:1.25; white-space:nowrap; pointer-events:none; box-shadow:0 4px 12px rgba(24,50,59,.22); transform:translate(-50%,-100%); }
+#modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 200; display: none; align-items: center; justify-content: center; }
+#modal-overlay.active { display: flex; }
+#modal-content { position: relative; max-width: 90vw; max-height: 90vh; }
+#modal-content img { max-width: 90vw; max-height: 85vh; border-radius: 8px; box-shadow: 0 8px 32px rgba(0,0,0,0.5); }
+#modal-close { position: absolute; top: -12px; right: -12px; width: 32px; height: 32px; background: #e74c3c; color: white; border: none; border-radius: 50%; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 201; }
+#modal-close:hover { background: #c0392b; }
+#modal-title { color: white; text-align: center; margin-top: 10px; font-size: 16px; }
+.building-marker { --pin:#397bb5; position:absolute; width:42px; height:53px; cursor:pointer; z-index:50; transform:translate(-50%,-50%); transition:transform .2s ease; display:none; align-items:flex-start; justify-content:center; isolation:isolate; }
+.building-marker::before { content:''; position:absolute; top:0; left:50%; width:39px; height:39px; transform:translateX(-50%) rotate(-45deg); border-radius:50% 50% 50% 5px; background:var(--pin); border:2px solid rgba(255,255,255,.96); box-shadow:0 4px 10px rgba(26,50,60,.28); z-index:-1; }
+.building-marker:hover { transform:translate(-50%,-50%) scale(1.13); }
+.poi-glyph { position:relative; z-index:1; width:25px; height:25px; margin-top:8px; fill:none; stroke:#fff; stroke-width:2.3; stroke-linecap:round; stroke-linejoin:round; pointer-events:none; }
+.building-marker.selected { z-index:58; transform:translate(-50%,-50%) scale(1.28); }
+.building-marker.selected::after { content:''; position:absolute; z-index:-2; top:-11px; left:50%; width:56px; height:56px; transform:translateX(-50%); border:3px solid #fff; border-radius:50%; background:color-mix(in srgb,var(--pin) 42%,transparent); box-shadow:0 0 0 5px color-mix(in srgb,var(--pin) 38%,transparent),0 8px 18px rgba(20,83,106,.42); animation:poi-pulse .95s ease-out infinite; pointer-events:none; }
+.building-marker.selected::before { border-color:#fff; box-shadow:0 0 0 3px #fff,0 0 0 7px var(--pin),0 8px 19px rgba(20,83,106,.45); animation:poi-core 1.9s ease-in-out infinite; }
+@keyframes poi-pulse { 0% { opacity:.95; transform:translateX(-50%) scale(.62); } 72% { opacity:0; transform:translateX(-50%) scale(1.45); } 100% { opacity:0; transform:translateX(-50%) scale(1.45); } }
+@keyframes poi-core { 0%,100% { filter:brightness(1); } 50% { filter:brightness(1.2); } }
+#building-marker, #building-marker8, #building-marker9 { --pin:#397bb5; }
+#building-marker2, #building-marker10 { --pin:#399878; }
+#building-marker3, #building-marker6 { --pin:#e99536; }
+#building-marker4 { --pin:#4d91c5; }
+#building-marker5 { --pin:#bf8055; }
+#building-marker7 { --pin:#a26dba; }
+#building-marker11, #building-marker12, #building-marker13, #building-marker14 { --pin:#87659f; }
+.building-marker.dual .poi-badge { position:absolute; z-index:2; top:-2px; right:-1px; display:grid; place-items:center; width:17px; height:17px; border:1.5px solid #fff; border-radius:50%; background:#397bb5; box-shadow:0 1px 4px rgba(30,55,61,.25); }
+.building-marker.dual .poi-badge svg { width:11px; height:11px; fill:none; stroke:#fff; stroke-width:2.4; stroke-linecap:round; stroke-linejoin:round; }
+.legend-symbol { --legend:#397bb5; display:grid; place-items:center; flex:0 0 auto; width:21px; height:21px; margin-right:7px; border-radius:50%; background:var(--legend); color:#fff; }
+.legend-symbol svg { width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:2.25; stroke-linecap:round; stroke-linejoin:round; }.legend-gate{--legend:#87659f}.legend-sport{--legend:#4d91c5}.legend-print{--legend:#399878}.legend-store{--legend:#e99536}.legend-tea{--legend:#bf8055}.legend-culture{--legend:#a26dba}.legend-express{--legend:#397bb5}
+.building-label { color: #3a3a3a; font-size: 11px; font-weight: 600; text-align: center; white-space: nowrap; text-shadow: 0 1px 2px rgba(255,255,255,0.8); pointer-events: none; }
+#compass { display: none; }
+#compass svg { width: 100%; height: 100%; }
+</style>
+</head>
+<body>
+<div id="canvas-container"></div>
+<div id="legend">
+  <div class="legend-item"><span class="legend-symbol legend-gate"><svg viewBox="0 0 32 32"><path d="M5 26h22M7 25V12h18v13M5 12h22M10 8h12M12 8V5h8v3M13 25V17h6v8"/></svg></span> 校门</div>
+  <div class="legend-item"><span class="legend-symbol legend-sport"><svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="10"/><path d="M16 6v20M7.3 11.1c4.6 2.6 13 2.6 17.4 0M7.3 20.9c4.6-2.6 13-2.6 17.4 0"/></svg></span> 体育馆入口</div>
+  <div class="legend-item"><span class="legend-symbol legend-print"><svg viewBox="0 0 32 32"><path d="M9 12V6h14v6M8 23H5v-9h22v9h-3M9 19h14v7H9zM23 17h.01"/></svg></span> 打印店</div>
+  <div class="legend-item"><span class="legend-symbol legend-store"><svg viewBox="0 0 32 32"><path d="M6 12h20l-2 14H8zM11 12l2-5h6l2 5M12 18h8"/></svg></span> 校园超市</div>
+  <div class="legend-item"><span class="legend-symbol legend-tea"><svg viewBox="0 0 32 32"><path d="M10 11h12l-1 15H11zM12 7h8M16 7V4M12 15h8M22 13h3a3 3 0 0 1 0 6h-3"/></svg></span> 餐饮饮品</div>
+  <div class="legend-item"><span class="legend-symbol legend-culture"><svg viewBox="0 0 32 32"><path d="M8 13h16v13H8zM11 13v-3a5 5 0 0 1 10 0v3M13 20h6M16 17v6"/></svg></span> 文创店</div>
+  <div class="legend-item"><span class="legend-symbol legend-express"><svg viewBox="0 0 32 32"><path d="M6 10l10-5 10 5v12l-10 5-10-5zM6 10l10 5 10-5M16 15v12"/></svg></span> 快递站</div>
+</div>
+<div id="controls-hint">左键旋转 · 滚轮缩放 · 右键平移</div>
+<div id="tooltip"></div>
+<div id="poi-tooltip"></div>
+<div id="building-marker" class="building-marker"><svg class="poi-glyph" viewBox="0 0 32 32"><path d="M6 10l10-5 10 5v12l-10 5-10-5zM6 10l10 5 10-5M16 15v12"/></svg></div><div id="building-marker2" class="building-marker dual"><svg class="poi-glyph" viewBox="0 0 32 32"><path d="M9 12V6h14v6M8 23H5v-9h22v9h-3M9 19h14v7H9zM23 17h.01"/></svg><span class="poi-badge"><svg viewBox="0 0 32 32"><path d="M6 10l10-5 10 5v12l-10 5-10-5zM6 10l10 5 10-5M16 15v12"/></svg></span></div><div id="building-marker3" class="building-marker dual"><svg class="poi-glyph" viewBox="0 0 32 32"><path d="M6 12h20l-2 14H8zM11 12l2-5h6l2 5M12 18h8"/></svg><span class="poi-badge"><svg viewBox="0 0 32 32"><path d="M6 10l10-5 10 5v12l-10 5-10-5zM6 10l10 5 10-5M16 15v12"/></svg></span></div><div id="building-marker4" class="building-marker"><svg class="poi-glyph" viewBox="0 0 32 32"><circle cx="16" cy="16" r="10"/><path d="M16 6v20M7.3 11.1c4.6 2.6 13 2.6 17.4 0M7.3 20.9c4.6-2.6 13-2.6 17.4 0"/></svg></div><div id="building-marker5" class="building-marker"><svg class="poi-glyph" viewBox="0 0 32 32"><path d="M10 11h12l-1 15H11zM12 7h8M16 7V4M12 15h8M22 13h3a3 3 0 0 1 0 6h-3"/></svg></div><div id="building-marker6" class="building-marker"><svg class="poi-glyph" viewBox="0 0 32 32"><path d="M6 12h20l-2 14H8zM11 12l2-5h6l2 5M12 18h8"/></svg></div><div id="building-marker7" class="building-marker"><svg class="poi-glyph" viewBox="0 0 32 32"><path d="M8 13h16v13H8zM11 13v-3a5 5 0 0 1 10 0v3M13 20h6M16 17v6"/></svg></div><div id="building-marker8" class="building-marker"><svg class="poi-glyph" viewBox="0 0 32 32"><path d="M6 10l10-5 10 5v12l-10 5-10-5zM6 10l10 5 10-5M16 15v12"/></svg></div><div id="building-marker9" class="building-marker"><svg class="poi-glyph" viewBox="0 0 32 32"><path d="M6 10l10-5 10 5v12l-10 5-10-5zM6 10l10 5 10-5M16 15v12"/></svg></div><div id="building-marker10" class="building-marker"><svg class="poi-glyph" viewBox="0 0 32 32"><path d="M9 12V6h14v6M8 23H5v-9h22v9h-3M9 19h14v7H9zM23 17h.01"/></svg></div><div id="building-marker11" class="building-marker"><svg class="poi-glyph" viewBox="0 0 32 32"><path d="M5 26h22M7 25V12h18v13M5 12h22M10 8h12M12 8V5h8v3M13 25V17h6v8"/></svg></div><div id="building-marker12" class="building-marker"><svg class="poi-glyph" viewBox="0 0 32 32"><path d="M5 26h22M7 25V12h18v13M5 12h22M10 8h12M12 8V5h8v3M13 25V17h6v8"/></svg></div><div id="building-marker13" class="building-marker"><svg class="poi-glyph" viewBox="0 0 32 32"><path d="M5 26h22M7 25V12h18v13M5 12h22M10 8h12M12 8V5h8v3M13 25V17h6v8"/></svg></div><div id="building-marker14" class="building-marker"><svg class="poi-glyph" viewBox="0 0 32 32"><path d="M5 26h22M7 25V12h18v13M5 12h22M10 8h12M12 8V5h8v3M13 25V17h6v8"/></svg></div>
+<div id="modal-overlay"><div id="modal-content"><button id="modal-close">&times;</button><img id="modal-img" src="333.png" alt=""><div id="modal-title"></div></div></div>
+<div id="compass"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="32" fill="rgba(255,255,255,0.85)" stroke="rgba(0,0,0,0.3)" stroke-width="1.5"/><g id="compass-inner"><polygon points="50,12 42,50 50,46 58,50" fill="#c0392b"/><polygon points="50,88 42,50 50,54 58,50" fill="#888"/><text x="50" y="10" text-anchor="middle" fill="#c0392b" font-size="12" font-weight="bold">N</text></g></svg></div>
+<script>
+document.documentElement.dataset.classicStarted = 'yes';
+window.addEventListener('error', function (event) {
+  const hint = document.getElementById('controls-hint');
+  if (hint) hint.textContent = '三维场景加载失败：' + (event.message || '未知错误');
+  console.error('MODEL_LOAD_ERROR', event.message, event.filename, event.lineno, event.colno);
+});
+window.addEventListener('unhandledrejection', function (event) {
+  const message = event.reason && (event.reason.message || String(event.reason)) || '未知错误';
+  const hint = document.getElementById('controls-hint');
+  if (hint) hint.textContent = '三维场景加载失败：' + message;
+  console.error('MODEL_PROMISE_ERROR', message);
+});
+</script>
+<script src="./model-bundle.js"></script></body></html>
